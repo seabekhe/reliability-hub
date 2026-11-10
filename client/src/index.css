@@ -1,0 +1,69 @@
+@import "@databricks/appkit-ui/styles.css";
+
+/* Dark utilities follow the in-app toggle (.dark on <html>), not the OS. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root,
+.light {
+  color-scheme: light;
+  --radius: 0.75rem;
+  --background: #f4f6fa;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #1d4ed8;
+  --primary-foreground: #ffffff;
+  --secondary: #e8eef7;
+  --secondary-foreground: #1e293b;
+  --muted: #e8eef7;
+  --muted-foreground: #334155;
+  --accent: #dbeafe;
+  --accent-foreground: #1e3a8a;
+  --border: #cbd5e1;
+  --input: #94a3b8;
+  --ring: #2563eb;
+}
+
+.dark {
+  color-scheme: dark;
+  --background: #0b1220;
+  --foreground: #f8fafc;
+  --card: #1e293b;
+  --card-foreground: #f8fafc;
+  --popover: #1e293b;
+  --popover-foreground: #f8fafc;
+  --primary: #60a5fa;
+  --primary-foreground: #0b1220;
+  --secondary: #334155;
+  --secondary-foreground: #f1f5f9;
+  --muted: #334155;
+  --muted-foreground: #cbd5e1;
+  --accent: #1e3a8a;
+  --accent-foreground: #dbeafe;
+  --border: #475569;
+  --input: #64748b;
+  --ring: #60a5fa;
+}
+
+html,
+body {
+  letter-spacing: 0;
+  word-spacing: normal;
+  font-kerning: normal;
+  font-feature-settings: normal;
+}
+
+body {
+  font-family:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}

@@ -1,0 +1,65 @@
+bundle:
+  name: reliability-hub
+
+include:
+  - resources/reliability_gold.pipeline.yml
+  - resources/reliability_gold_daily.job.yml
+
+variables:
+  agents_serving_endpoint_name:
+    description: Default LLM serving endpoint name
+  sql_warehouse_id:
+    description: SQL Warehouse ID
+  genie_space_id:
+    description: Genie Space ID backing the Reliability AI Assistant
+  postgres_branch:
+    description: Full Lakebase Postgres branch resource name. Obtain by running `databricks postgres list-branches {project-name}`, select the desired item from the output array and use its .name value. Requires the project resource name.
+  postgres_database:
+    description: Full Lakebase Postgres database resource name. Obtain by running `databricks postgres list-databases {branch-name}`, select the desired item from the output array and use its .name value. Requires the branch resource name.
+  postgres_project:
+    description: Full Lakebase Postgres project resource name. Obtain by running `databricks postgres list-projects`, select the desired item from the output array and use its .name value.
+
+resources:
+  apps:
+    app:
+      name: "reliability-hub"
+      description: "Reliability Hub — unified reliability analytics"
+      source_code_path: ./
+      user_api_scopes:
+        - sql
+        - dashboards.genie
+
+      # The resources which this app has access to.
+      resources:
+        - name: agents-serving-endpoint
+          serving_endpoint:
+            name: ${var.agents_serving_endpoint_name}
+            permission: CAN_QUERY
+        - name: sql-warehouse
+          sql_warehouse:
+            id: ${var.sql_warehouse_id}
+            permission: CAN_USE
+        - name: genie-space
+          genie_space:
+            name: "Reliability Hub — Assistant"
+            space_id: ${var.genie_space_id}
+            permission: CAN_RUN
+        - name: postgres
+          postgres:
+            branch: ${var.postgres_branch}
+            database: ${var.postgres_database}
+            permission: CAN_CONNECT_AND_CREATE
+
+targets:
+  default:
+    default: true
+    workspace:
+      host: https://fevm-serverless-sea202601.cloud.databricks.com
+
+    variables:
+      agents_serving_endpoint_name: databricks-claude-sonnet-4-5
+      sql_warehouse_id: b7469619d98a1547
+      genie_space_id: 01f1da15ad1e12a994581146cb487715
+      postgres_branch: projects/reliability-hub/branches/production
+      postgres_database: projects/reliability-hub/branches/production/databases/databricks-postgres
+      postgres_project: projects/reliability-hub

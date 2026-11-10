@@ -1,0 +1,17 @@
+resources:
+  pipelines:
+    reliability_gold:
+      name: reliability-gold
+      catalog: serverless_sea202601_catalog
+      schema: reliability_gold
+      serverless: true
+      photon: true
+      continuous: false
+      channel: CURRENT
+      libraries:
+        - glob:
+            include: ../pipelines/reliability_gold/transformations/**
+      configuration:
+        source_catalog: serverless_sea202601_catalog
+        source_schema: outage_source
+        landing_volume: /Volumes/serverless_sea202601_catalog/reliability_gold/raw

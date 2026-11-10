@@ -1,0 +1,342 @@
+{
+  "version": 2,
+  "config": {
+    "sample_questions": [
+      {
+        "id": "01f1dc566b4b1fc89311195fa48c71a2",
+        "question": [
+          "Show the AI feeder briefs for the top 5 worst performing feeders, with their restoration times"
+        ]
+      },
+      {
+        "id": "01f1dc566b4c1bd4bf18df42e164e5a6",
+        "question": [
+          "Which PD areas have the worst SAIDI this year?"
+        ]
+      },
+      {
+        "id": "01f1dc566b4d16b1b85b58f4f227e1f9",
+        "question": [
+          "Is SAIDI beating or missing goal year to date?"
+        ]
+      },
+      {
+        "id": "01f1dc566b4e10b0b29a99cbb2549bf5",
+        "question": [
+          "Show the 10 worst performing feeders by severity index"
+        ]
+      },
+      {
+        "id": "01f1dc566b4e1b4d8fa35d51996a7767",
+        "question": [
+          "What are the top outage causes by customers interrupted?"
+        ]
+      },
+      {
+        "id": "01f1dc566b4f1651ae59d539f4cd9d23",
+        "question": [
+          "How has monthly SAIDI trended through 2026?"
+        ]
+      },
+      {
+        "id": "01f1dc566b50112c95d14a5a79b53f78",
+        "question": [
+          "Which customers have the most repeat interruptions?"
+        ]
+      },
+      {
+        "id": "01f1dc566b501b218c50c1a9bdbec5ff",
+        "question": [
+          "Which devices have the most operations in the last 12 months?"
+        ]
+      }
+    ]
+  },
+  "data_sources": {
+    "tables": [
+      {
+        "identifier": "serverless_sea202601_catalog.reliability_gold.company_breakdown"
+      },
+      {
+        "identifier": "serverless_sea202601_catalog.reliability_gold.customer_incidents"
+      },
+      {
+        "identifier": "serverless_sea202601_catalog.reliability_gold.devices"
+      },
+      {
+        "identifier": "serverless_sea202601_catalog.reliability_gold.feeder_briefs"
+      },
+      {
+        "identifier": "serverless_sea202601_catalog.reliability_gold.incidents"
+      },
+      {
+        "identifier": "serverless_sea202601_catalog.reliability_gold.kpi_goals"
+      },
+      {
+        "identifier": "serverless_sea202601_catalog.reliability_gold.kpi_monthly"
+      },
+      {
+        "identifier": "serverless_sea202601_catalog.reliability_gold.kpi_ytd"
+      },
+      {
+        "identifier": "serverless_sea202601_catalog.reliability_gold.reliability_rankings"
+      },
+      {
+        "identifier": "serverless_sea202601_catalog.reliability_gold.worst_performing_feeders"
+      }
+    ]
+  },
+  "instructions": {
+    "text_instructions": [
+      {
+        "id": "db5f7ab5ee070c8fb872cd82d1ec45b2",
+        "content": [
+          "## PURPOSE\n",
+          "- Answer reliability questions for Omed Utilities (OC1, OC2, OC3) using reliability_gold tables.\n",
+          "- Users are reliability planners and executives. Mock 2026 data, reported as of 2026-07-31.\n",
+          "\n",
+          "## DISAMBIGUATION\n",
+          "- When the user does not name an OpCo, ask whether they mean OC1, OC2, OC3, or a comparison.\n",
+          "- 'This year' and YTD mean calendar 2026. Monthly SAIDI comes from kpi_monthly, not an average of kpi_ytd.\n",
+          "- Worst feeders means worst_performing_feeders ranked by si descending, dataset = Reported, unless the user asks for CX.\n",
+          "\n",
+          "## DATA QUALITY NOTES\n",
+          "- company_breakdown.saidi_actual can be NULL for some PD areas; exclude those rows when ranking.\n",
+          "- feeder_briefs.brief is AI-generated draft text. Quote numbers from numeric columns, not from the brief wording.\n",
+          "- kpi_monthly is monthly grain. Sum it for year totals; do not average monthly SAIDI into a YTD figure.\n",
+          "\n",
+          "## CONSTRAINTS\n",
+          "- Exclude company_code = 'ALL' when ranking or comparing individual companies.\n",
+          "- Filter to one company_code unless the user explicitly asks to compare companies.\n",
+          "- Do not treat feeder_briefs.brief as a source of numeric truth.\n",
+          "\n",
+          "## Instructions you must follow when providing summaries\n",
+          "- When comparing actual vs goal, state beating goal or missing goal.\n",
+          "- Label feeder brief text as an AI-generated draft.\n",
+          "- Remind users this is mock Omed Utilities data and to verify before sharing.\n"
+        ]
+      }
+    ],
+    "example_question_sqls": [
+      {
+        "id": "05292d700f8d4c2d629304bff89bb7e9",
+        "question": [
+          "Which devices have the most operations in the last 12 months?"
+        ],
+        "sql": [
+          "SELECT device, company_code, device_type, pd_area, mo_12\n",
+          "FROM serverless_sea202601_catalog.reliability_gold.devices\n",
+          "WHERE dataset = 'Reported'\n",
+          "ORDER BY mo_12 DESC\n",
+          "LIMIT 10"
+        ],
+        "usage_guidance": [
+          "Use devices.mo_12 for last-12-month operations. Default dataset is Reported."
+        ]
+      },
+      {
+        "id": "392d333581b66c0f18de40af13e3b2f7",
+        "question": [
+          "Show the AI feeder briefs for the top 5 worst performing feeders, with their restoration times"
+        ],
+        "sql": [
+          "SELECT company_code, feeder_id, wpf_rank, brief\n",
+          "FROM serverless_sea202601_catalog.reliability_gold.feeder_briefs\n",
+          "WHERE wpf_rank <= 5\n",
+          "ORDER BY company_code, wpf_rank"
+        ],
+        "usage_guidance": [
+          "Use feeder_briefs for rank <= 5. Label brief as AI-generated draft. Do not take numbers from the brief text."
+        ]
+      },
+      {
+        "id": "4fa3da7006641c4906d4178172dcf5b0",
+        "question": [
+          "Which PD areas have the worst SAIDI this year?"
+        ],
+        "sql": [
+          "SELECT company_code, pd_area, saidi_actual, saifi_actual\n",
+          "FROM serverless_sea202601_catalog.reliability_gold.company_breakdown\n",
+          "WHERE saidi_actual IS NOT NULL\n",
+          "ORDER BY saidi_actual DESC"
+        ],
+        "usage_guidance": [
+          "Use company_breakdown for PD-area SAIDI. Drop NULL saidi_actual rows. Rank highest SAIDI first."
+        ]
+      },
+      {
+        "id": "52826c681e5f2f84f5976b25649f145d",
+        "question": [
+          "Which customers have the most repeat interruptions?"
+        ],
+        "sql": [
+          "SELECT account_no, company_code, pd_area, feeder_id, total_incidents, total_duration\n",
+          "FROM serverless_sea202601_catalog.reliability_gold.customer_incidents\n",
+          "ORDER BY total_incidents DESC\n",
+          "LIMIT 10"
+        ],
+        "usage_guidance": [
+          "Use customer_incidents. Rank by total_incidents descending."
+        ]
+      },
+      {
+        "id": "5a6279f9d17dac5243c4619ce590a4b1",
+        "question": [
+          "What are the top outage causes by customers interrupted?"
+        ],
+        "sql": [
+          "SELECT cause, SUM(customers_interrupted) AS customers_interrupted, COUNT(*) AS event_count\n",
+          "FROM serverless_sea202601_catalog.reliability_gold.incidents\n",
+          "WHERE YEAR(start_ts) = 2026\n",
+          "GROUP BY cause\n",
+          "ORDER BY customers_interrupted DESC\n",
+          "LIMIT 10"
+        ],
+        "usage_guidance": [
+          "Use incidents. Sum customers_interrupted by cause for the requested year."
+        ]
+      },
+      {
+        "id": "6eeab0b2c6e57f45f9ad770a4d928769",
+        "question": [
+          "Show the 10 worst performing feeders by severity index"
+        ],
+        "sql": [
+          "SELECT company_code, pd_area, feeder_id, si, saidi, saifi, event_count\n",
+          "FROM serverless_sea202601_catalog.reliability_gold.worst_performing_feeders\n",
+          "WHERE dataset = 'Reported'\n",
+          "  AND company_code <> 'ALL'\n",
+          "ORDER BY si DESC\n",
+          "LIMIT 10"
+        ],
+        "usage_guidance": [
+          "Use worst_performing_feeders. Default dataset is Reported. Rank by si descending."
+        ]
+      },
+      {
+        "id": "a82261c427f6c722c7f77ad9481fc8eb",
+        "question": [
+          "How has monthly SAIDI trended through 2026?"
+        ],
+        "sql": [
+          "SELECT month, AVG(saidi) AS avg_saidi\n",
+          "FROM serverless_sea202601_catalog.reliability_gold.kpi_monthly\n",
+          "WHERE year = 2026\n",
+          "  AND dataset = 'Reported'\n",
+          "  AND month IS NOT NULL\n",
+          "  AND saidi IS NOT NULL\n",
+          "GROUP BY month\n",
+          "ORDER BY month"
+        ],
+        "usage_guidance": [
+          "Use kpi_monthly for monthly trends. Filter year = 2026 and dataset = Reported. Do not average kpi_ytd."
+        ]
+      },
+      {
+        "id": "b31d2e01735114e9ed8f2cf29694810a",
+        "question": [
+          "Is SAIDI beating or missing goal year to date?"
+        ],
+        "sql": [
+          "SELECT company_code, year, saidi_actual, saidi_goal,\n",
+          "       CASE WHEN saidi_actual <= saidi_goal THEN 'beating goal' ELSE 'missing goal' END AS saidi_goal_status\n",
+          "FROM serverless_sea202601_catalog.reliability_gold.kpi_ytd\n",
+          "WHERE company_code <> 'ALL'\n",
+          "ORDER BY company_code"
+        ],
+        "usage_guidance": [
+          "Use kpi_ytd for YTD actual vs goal. Lower SAIDI is better, so actual <= goal is beating goal."
+        ]
+      }
+    ],
+    "sql_snippets": {
+      "filters": [
+        {
+          "id": "028af942b3546b9302882ab13a5f147d",
+          "display_name": "Reported dataset",
+          "sql": [
+            "worst_performing_feeders.dataset = 'Reported'"
+          ],
+          "synonyms": [
+            "reported",
+            "reported dataset"
+          ],
+          "instruction": [
+            "Apply when ranking worst performing feeders unless the user asks for CX."
+          ]
+        },
+        {
+          "id": "097688f137733e229675eb8f5c6c9184",
+          "display_name": "PD areas with SAIDI",
+          "sql": [
+            "company_breakdown.saidi_actual IS NOT NULL"
+          ],
+          "synonyms": [
+            "non-null SAIDI",
+            "areas with SAIDI"
+          ],
+          "instruction": [
+            "Apply when ranking PD areas by SAIDI so NULL rows drop out."
+          ]
+        },
+        {
+          "id": "13303c08a3f507cb388bab2ea9087a77",
+          "display_name": "Calendar 2026",
+          "sql": [
+            "kpi_monthly.year = 2026"
+          ],
+          "synonyms": [
+            "this year",
+            "YTD year",
+            "2026"
+          ],
+          "instruction": [
+            "Apply for this-year or YTD monthly trends on kpi_monthly."
+          ]
+        },
+        {
+          "id": "13434732bc7361f0aa86d1035a744bbe",
+          "display_name": "CX dataset",
+          "sql": [
+            "worst_performing_feeders.dataset = 'CX'"
+          ],
+          "synonyms": [
+            "customer experience dataset",
+            "CX feeders"
+          ],
+          "instruction": [
+            "Apply when the user asks for customer-experience worst feeders."
+          ]
+        },
+        {
+          "id": "324b51e7e68b63a80e120afd475b767f",
+          "display_name": "Single OpCo, not ALL",
+          "sql": [
+            "kpi_ytd.company_code <> 'ALL'"
+          ],
+          "synonyms": [
+            "exclude system rollup",
+            "individual companies"
+          ],
+          "instruction": [
+            "Apply when ranking or comparing individual companies on kpi_ytd."
+          ]
+        },
+        {
+          "id": "f06a179cf08ed95ad951f671adc9be1f",
+          "display_name": "Top 5 feeder briefs",
+          "sql": [
+            "feeder_briefs.wpf_rank <= 5"
+          ],
+          "synonyms": [
+            "top 5 briefs",
+            "top five feeders"
+          ],
+          "instruction": [
+            "Apply when the user asks for top-5 feeder briefs."
+          ]
+        }
+      ]
+    }
+  }
+}

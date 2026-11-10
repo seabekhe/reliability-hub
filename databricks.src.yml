@@ -1,0 +1,37 @@
+bundle:
+  name: reliability-hub-src
+
+variables:
+  sql_warehouse_id:
+    description: SQL Warehouse ID
+  genie_space_id:
+    description: Genie Space ID backing the Reliability AI Assistant
+
+resources:
+  apps:
+    app:
+      name: "reliability-hub-src"
+      description: "Reliability Hub on the 25 outage_source tables via Lakehouse//RT"
+      source_code_path: ./
+      user_api_scopes:
+        - sql
+        - dashboards.genie
+      resources:
+        - name: sql-warehouse
+          sql_warehouse:
+            id: ${var.sql_warehouse_id}
+            permission: CAN_USE
+        - name: genie-space
+          genie_space:
+            name: "Reliability Hub — Assistant"
+            space_id: ${var.genie_space_id}
+            permission: CAN_RUN
+
+targets:
+  default:
+    default: true
+    workspace:
+      host: https://fevm-serverless-sea202601.cloud.databricks.com
+    variables:
+      sql_warehouse_id: 0000000004f59f01
+      genie_space_id: 01f1da15ad1e12a994581146cb487715

@@ -1,0 +1,6 @@
+SELECT
+  CAST(NULL AS STRING) AS user_email,
+  CAST(NULL AS STRING) AS company_code,
+  CAST(NULL AS STRING) AS role
+FROM (SELECT 1 AS x) dummy
+WHERE 1 = 0

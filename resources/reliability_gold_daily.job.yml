@@ -1,0 +1,23 @@
+resources:
+  jobs:
+    reliability_gold_daily:
+      name: reliability-gold-daily
+      max_concurrent_runs: 1
+      schedule:
+        quartz_cron_expression: "0 0 6 * * ?"
+        timezone_id: America/Chicago
+        pause_status: UNPAUSED
+      tasks:
+        - task_key: seed_landing
+          notebook_task:
+            notebook_path: ../pipelines/reliability_gold/seed_landing.py
+            source: WORKSPACE
+            base_parameters:
+              source_catalog: serverless_sea202601_catalog
+              source_schema: outage_source
+              landing_volume: /Volumes/serverless_sea202601_catalog/reliability_gold/raw
+        - task_key: refresh_pipeline
+          depends_on:
+            - task_key: seed_landing
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.reliability_gold.id}
