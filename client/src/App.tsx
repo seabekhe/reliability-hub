@@ -22,6 +22,7 @@ import { sql } from '@databricks/appkit-ui/js';
 import {
   Activity,
   Bookmark,
+  Camera,
   Check,
   ChevronDown,
   Cpu,
@@ -58,6 +59,7 @@ import {
   HelpPage,
   HistoricalPage,
   IncidentsPage,
+  InspectionsPage,
   RankingsPage,
   SettingsPage,
   WpfPage,
@@ -70,6 +72,7 @@ type ViewKey =
   | 'historical'
   | 'incidents'
   | 'devices'
+  | 'inspections'
   | 'customers'
   | 'groups'
   | 'wpf'
@@ -127,6 +130,7 @@ const nav: Array<{ section: string; items: NavItem[] }> = [
     items: [
       { to: '/incidents', label: 'Incidents', icon: Zap, view: 'incidents', badge: true },
       { to: '/devices', label: 'Devices', icon: Cpu, view: 'devices' },
+      { to: '/inspections', label: 'Inspections', icon: Camera, view: 'inspections' },
       { to: '/customers', label: 'Customer incidents', icon: Users, view: 'customers' },
       { to: '/wpf', label: 'Worst feeders', icon: TrendingDown, view: 'wpf' },
     ],
@@ -631,6 +635,9 @@ function IncidentsRoute() {
 function DevicesRoute() {
   return <DevicesPage opco={useHub().opco} />;
 }
+function InspectionsRoute() {
+  return <InspectionsPage opco={useHub().opco} />;
+}
 function CustomersRoute() {
   return <CustomersPage opco={useHub().opco} />;
 }
@@ -654,6 +661,7 @@ const router = createBrowserRouter([
       { path: '/historical', element: <HistoricalRoute /> },
       { path: '/incidents', element: <IncidentsRoute /> },
       { path: '/devices', element: <DevicesRoute /> },
+      { path: '/inspections', element: <InspectionsRoute /> },
       { path: '/customers', element: <CustomersRoute /> },
       { path: '/groups', element: <GroupsRoute /> },
       { path: '/wpf', element: <WpfRoute /> },

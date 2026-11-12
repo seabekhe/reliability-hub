@@ -1,7 +1,0 @@
-resources:
-  genie_spaces:
-    reliability_assistant:
-      title: "Reliability Hub — Assistant"
-      parent_path: /Users/<workspace-user>/
-      warehouse_id: ${var.sql_warehouse_id}
-      file_path: ./reliability_assistant.geniespace.json

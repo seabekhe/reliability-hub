@@ -22,7 +22,10 @@ SRC = f"{CAT}.outage_source"
 spark = SparkSession.builder.getOrCreate()
 spark.sql(f"CREATE SCHEMA IF NOT EXISTS {SRC}")
 # Full rebuild every run: drop existing source tables so column changes apply cleanly.
+# Keep inspection_events_* — those are owned by generate_inspections.py.
 for _t in spark.sql(f"SHOW TABLES IN {SRC}").collect():
+    if str(_t.tableName).startswith("inspection_events"):
+        continue
     spark.sql(f"DROP TABLE IF EXISTS {SRC}.{_t.tableName}")
 
 

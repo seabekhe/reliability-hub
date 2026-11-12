@@ -29,6 +29,7 @@ TABLES = [
     "customer_counts_daily",
     "rankings_workgroup",
     "outage_customer_detail",
+    "inspection_events",
 ]
 # Per-company source tables are named <table>_<company suffix>.
 COMPANY_SUFFIXES = ["oc1", "oc2", "oc3"]

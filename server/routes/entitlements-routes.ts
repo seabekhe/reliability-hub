@@ -7,6 +7,7 @@ const ALL_VIEWS = [
   'historical',
   'incidents',
   'devices',
+  'inspections',
   'customers',
   'groups',
   'wpf',

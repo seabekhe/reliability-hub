@@ -11,7 +11,7 @@ import {
   useAnalyticsQuery,
 } from '@databricks/appkit-ui/react';
 import { sql } from '@databricks/appkit-ui/js';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { ArrowRight, Minus, Pencil, Plus, Trash2, TrendingDown, TrendingUp, X } from 'lucide-react';
 import { formatInt, formatNum, formatPct, toNumber } from '../lib/formatters';
@@ -1116,6 +1116,370 @@ export function DevicesPage({ opco }: { opco: OpCoCode }) {
         noun="devices"
         emptyText={error ? error : 'No devices match these filters'}
         footer={<HeatLegend label="Shading: fewer → more incidents" />}
+      />
+    </div>
+  );
+}
+
+const DEFECT_LABEL: Record<string, string> = {
+  vegetation_encroachment: 'Vegetation',
+  damaged_insulator: 'Insulator',
+  leaning_pole: 'Leaning pole',
+  conductor_damage: 'Conductor',
+  clear: 'Clear',
+};
+
+/** Matches map risk colors: High=red, Medium=amber, Low=blue. */
+const FINDING_TONE: Record<string, Tone> = {
+  Critical: 'bad',
+  Elevated: 'warn',
+  Watch: 'info',
+  Clear: 'info',
+};
+
+function riskTone(band: string): 'hot' | 'neutral' | 'cool' {
+  if (band === 'High') return 'hot';
+  if (band === 'Medium') return 'neutral';
+  return 'cool';
+}
+
+const INSPECTION_SELECTS = [
+  { key: 'pd_area', label: 'PD area' },
+  { key: 'workgroup', label: 'Workgroup' },
+  { key: 'substation', label: 'Substation' },
+  { key: 'device_type', label: 'Device type' },
+  { key: 'defect_type', label: 'Defect' },
+  { key: 'finding_status', label: 'Finding' },
+  { key: 'source', label: 'Source' },
+];
+const INSPECTION_TEXTS = [
+  { key: 'feeder_id', label: 'Feeder', placeholder: 'Feeder ID' },
+  { key: 'device', label: 'Device', placeholder: 'Device name' },
+];
+
+const INSPECTION_COLUMNS: Array<Column<Row>> = [
+  {
+    key: 'finding_status',
+    label: 'Finding',
+    render: (r) => <Badge tone={FINDING_TONE[str(r.finding_status)] ?? 'neutral'}>{str(r.finding_status, '—')}</Badge>,
+  },
+  {
+    key: 'defect_type',
+    label: 'Defect',
+    value: (r) => DEFECT_LABEL[str(r.defect_type)] ?? str(r.defect_type),
+  },
+  { key: 'severity', label: 'Severity', heat: true, digits: 0 },
+  {
+    key: 'confidence',
+    label: 'Confidence',
+    render: (r) => formatPct(toNumber(r.confidence as number) * 100),
+  },
+  { key: 'device', label: 'Device', render: (r) => <IdChip>{String(r.device)}</IdChip> },
+  { key: 'device_type', label: 'Type' },
+  { key: 'feeder_id', label: 'Feeder', render: (r) => <IdChip>{String(r.feeder_id)}</IdChip> },
+  { key: 'pd_area', label: 'PD area' },
+  { key: 'workgroup', label: 'Workgroup' },
+  { key: 'source', label: 'Source' },
+  {
+    key: 'device_mo_12',
+    label: 'Device 12 mo',
+    heat: true,
+    digits: 0,
+    hint: 'Trailing incidents on this device',
+  },
+  { key: 'captured_at', label: 'Captured' },
+  {
+    key: 'summary',
+    label: 'Summary',
+    sortable: false,
+    value: (r) => str(r.summary),
+  },
+];
+
+export function InspectionsPage({ opco }: { opco: OpCoCode }) {
+  const { data, loading, error } = useAnalyticsQuery('inspection_findings', opcoParam(opco));
+  const riskQuery = useAnalyticsQuery('inspection_device_risk', opcoParam(opco));
+  const rows = useMemo(() => (data ?? []) as Row[], [data]);
+  const riskRows = useMemo(() => (riskQuery.data ?? []) as Row[], [riskQuery.data]);
+  const filters = useMapTableFilters(rows, { selects: INSPECTION_SELECTS, texts: INSPECTION_TEXTS });
+  const view = filters.filtered;
+  const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSelectedDevice(null);
+    setSelectedId(null);
+  }, [opco]);
+
+  const open = view.filter((r) => str(r.defect_type) !== 'clear').length;
+  const critical = view.filter((r) => str(r.finding_status) === 'Critical').length;
+  const highRisk = riskRows.filter((r) => str(r.risk_band) === 'High').length;
+
+  const deviceHasImages = useMemo(() => {
+    if (!selectedDevice) return false;
+    return rows.some((r) => str(r.device) === selectedDevice);
+  }, [rows, selectedDevice]);
+
+  const gallery = useMemo(() => {
+    const scoped = selectedDevice ? view.filter((r) => str(r.device) === selectedDevice) : view;
+    return [...scoped]
+      .sort((a, b) => toNumber(b.severity as number) - toNumber(a.severity as number))
+      .slice(0, 12);
+  }, [view, selectedDevice]);
+
+  const galleryEmptyMessage = selectedDevice
+    ? deviceHasImages
+      ? `No frames match the current filters for device ${selectedDevice}`
+      : `No images captured yet for device ${selectedDevice}`
+    : 'No inspection frames match these filters';
+
+  const selectedFinding =
+    (selectedId ? gallery.find((r) => str(r.inspection_id) === selectedId) : undefined) ??
+    gallery[0] ??
+    null;
+
+  const mapFocus = useMemo(() => {
+    if (!selectedDevice) return null;
+    const fromFinding =
+      selectedFinding && str(selectedFinding.device) === selectedDevice
+        ? selectedFinding
+        : view.find((r) => str(r.device) === selectedDevice);
+    const fromRisk = riskRows.find((r) => str(r.device) === selectedDevice);
+    const lat = toNumber((fromFinding?.lat ?? fromRisk?.lat) as number);
+    const lon = toNumber((fromFinding?.lon ?? fromRisk?.lon) as number);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) || (lat === 0 && lon === 0)) return null;
+    return {
+      lat,
+      lon,
+      zoom: 12,
+      key: selectedId ?? selectedDevice,
+    };
+  }, [selectedDevice, selectedId, selectedFinding, view, riskRows]);
+
+  const mapRef = useRef<HTMLDivElement | null>(null);
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Operations"
+        title="Inspections"
+        description="Field inspection photos with pre-baked computer-vision findings. Model is stubbed — swap in multimodal ai_query later without changing this page."
+      />
+      <FilterBar model={filters} />
+      {error && <EmptyState>{error}</EmptyState>}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <Stat label="Inspections" value={loading ? '…' : view.length.toLocaleString()} />
+        <Stat label="Open findings" value={loading ? '…' : open.toLocaleString()} tone="bad" />
+        <Stat label="Critical" value={loading ? '…' : critical.toLocaleString()} tone="bad" />
+        <Stat
+          label="High-risk devices"
+          value={riskQuery.loading ? '…' : highRisk.toLocaleString()}
+          hint="Findings + trailing incidents"
+        />
+      </div>
+      <div ref={mapRef}>
+        <MapPanel
+          points={riskRows.map((r) => {
+            const device = str(r.device);
+            const active = selectedDevice === device;
+            return {
+              id: device,
+              lat: r.lat as number,
+              lon: r.lon as number,
+              label: `${device} · ${String(r.risk_band)} · ${String(DEFECT_LABEL[str(r.latest_defect)] ?? r.latest_defect)}`,
+              tone: riskTone(str(r.risk_band)),
+              selected: active,
+              radius: active ? 12 : undefined,
+            };
+          })}
+          cluster={!selectedDevice}
+          focus={mapFocus}
+          onPointClick={(point) => {
+            const device = point.id;
+            if (!device) return;
+            setSelectedDevice(device);
+            setSelectedId(null);
+          }}
+          height={420}
+          title="Device inspection risk"
+          legend={[
+            { tone: 'hot', label: 'High risk' },
+            { tone: 'neutral', label: 'Medium risk' },
+            { tone: 'cool', label: 'Low risk' },
+          ]}
+        />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+        <Panel>
+          <div className="flex items-center justify-between gap-3 px-1 pb-3">
+            <div>
+              <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">Inspection gallery</div>
+              <div className="text-xs text-slate-500">
+                {selectedDevice
+                  ? `Device ${selectedDevice} · badges use the same High / Medium / Low colors as the map`
+                  : 'Highest-severity frames · click a map pin to filter by device'}
+              </div>
+            </div>
+            {selectedDevice && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedDevice(null);
+                  setSelectedId(null);
+                }}
+                className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
+              >
+                Clear device
+              </button>
+            )}
+          </div>
+          {loading ? (
+            <div className="py-16 text-center text-sm text-slate-500">Loading frames…</div>
+          ) : gallery.length === 0 ? (
+            <EmptyState>{galleryEmptyMessage}</EmptyState>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {gallery.map((r) => {
+                const active = selectedFinding && str(selectedFinding.inspection_id) === str(r.inspection_id);
+                return (
+                  <button
+                    key={str(r.inspection_id)}
+                    type="button"
+                    onClick={() => {
+                      setSelectedDevice(str(r.device));
+                      setSelectedId(str(r.inspection_id));
+                      mapRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }}
+                    className={`overflow-hidden rounded-xl border text-left transition ${
+                      active
+                        ? 'border-cyan-500 ring-2 ring-cyan-500/30'
+                        : 'border-slate-200 hover:border-slate-300 dark:border-white/10'
+                    }`}
+                  >
+                    <img
+                      src={str(r.thumbnail_data_url)}
+                      alt={`${DEFECT_LABEL[str(r.defect_type)] ?? str(r.defect_type)} on ${str(r.device)}`}
+                      className="aspect-[3/2] w-full object-cover bg-slate-900"
+                    />
+                    <div className="space-y-1 px-2.5 py-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <Badge tone={FINDING_TONE[str(r.finding_status)] ?? 'neutral'}>
+                          {DEFECT_LABEL[str(r.defect_type)] ?? str(r.defect_type)}
+                        </Badge>
+                        <span className="tabular text-[11px] text-slate-500">sev {str(r.severity)}</span>
+                      </div>
+                      <div className="truncate text-xs font-medium text-slate-800 dark:text-slate-100">
+                        {str(r.device)}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </Panel>
+        <Panel>
+          <div className="space-y-4 px-1">
+            <div>
+              <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">Selected finding</div>
+              <div className="text-xs text-slate-500">
+                {selectedFinding
+                  ? str(selectedFinding.image_credit, 'Field Inspection Library')
+                  : selectedDevice
+                    ? `Device ${selectedDevice}`
+                    : 'Select a frame'}
+              </div>
+            </div>
+            {!selectedFinding ? (
+              <EmptyState>
+                {selectedDevice && !deviceHasImages
+                  ? `No images captured yet for device ${selectedDevice}`
+                  : selectedDevice
+                    ? galleryEmptyMessage
+                    : 'Select a frame to review the finding'}
+              </EmptyState>
+            ) : (
+              <>
+                <img
+                  src={str(selectedFinding.thumbnail_data_url)}
+                  alt={str(selectedFinding.inspection_id)}
+                  className="aspect-[3/2] w-full rounded-xl object-cover bg-slate-900"
+                />
+                <div className="flex flex-wrap gap-2">
+                  <Badge tone={FINDING_TONE[str(selectedFinding.finding_status)] ?? 'neutral'}>
+                    {str(selectedFinding.finding_status)}
+                  </Badge>
+                  <Pill tone="neutral">{DEFECT_LABEL[str(selectedFinding.defect_type)] ?? str(selectedFinding.defect_type)}</Pill>
+                  <Pill tone="neutral">sev {str(selectedFinding.severity)}</Pill>
+                  <Pill tone="neutral">{formatPct(toNumber(selectedFinding.confidence as number) * 100)}</Pill>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <div className="text-xs text-slate-500">Device</div>
+                    <div className="font-medium text-slate-900 dark:text-slate-50">{str(selectedFinding.device)}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-500">Feeder</div>
+                    <div className="font-medium text-slate-900 dark:text-slate-50">{str(selectedFinding.feeder_id)}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-500">Source</div>
+                    <div className="font-medium text-slate-900 dark:text-slate-50">{str(selectedFinding.source)}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-500">Captured</div>
+                    <div className="font-medium text-slate-900 dark:text-slate-50">{str(selectedFinding.captured_at)}</div>
+                  </div>
+                </div>
+                <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+                  {str(selectedFinding.summary)}
+                </p>
+                <div className="rounded-xl border border-dashed border-slate-200 px-3 py-2 text-xs text-slate-500 dark:border-white/10">
+                  {str(selectedFinding.commons_title) || str(selectedFinding.image_rel_path)} ·{' '}
+                  {str(selectedFinding.image_license, 'CC')}
+                </div>
+              </>
+            )}
+          </div>
+        </Panel>
+      </div>
+      <div className="overflow-x-auto">
+        <div className="mb-3 flex flex-wrap gap-2">
+          {riskRows.slice(0, 8).map((r) => (
+            <button
+              key={str(r.device)}
+              type="button"
+              onClick={() => {
+                setSelectedDevice(str(r.device));
+                setSelectedId(null);
+                mapRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }}
+              className={`rounded-full border px-3 py-1 text-xs transition ${
+                selectedDevice === str(r.device)
+                  ? 'border-cyan-500 bg-cyan-500/10 text-cyan-800 dark:text-cyan-200'
+                  : 'border-slate-200 text-slate-600 hover:border-slate-300 dark:border-white/10 dark:text-slate-300'
+              }`}
+            >
+              <span className="font-medium">{str(r.device)}</span>
+              <span className="mx-1.5 text-slate-300 dark:text-slate-600">·</span>
+              <span className={str(r.risk_band) === 'High' ? 'text-rose-600 dark:text-rose-400' : ''}>
+                {str(r.risk_band)} · {formatNum(toNumber(r.risk_score as number), 0)}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+      <DataGrid
+        rows={view}
+        columns={INSPECTION_COLUMNS}
+        rowKey={(r, i) => `${String(r.inspection_id)}-${i}`}
+        loading={loading}
+        urlState={false}
+        defaultSort={{ key: 'severity', dir: 'desc' }}
+        exportName="inspections"
+        searchPlaceholder="Search inspections…"
+        noun="inspections"
+        emptyText={error ? error : 'No inspections match these filters'}
       />
     </div>
   );

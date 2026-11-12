@@ -13,6 +13,10 @@ export type MapPoint = {
   radius?: number;
   /** Short text drawn inside the marker, e.g. a rank number. */
   badge?: string;
+  /** Stable id for click handlers (e.g. device name). */
+  id?: string;
+  /** Draw a selection ring around this marker. */
+  selected?: boolean;
 };
 
 export type MapPolygon = {
@@ -60,6 +64,8 @@ type Resolved = {
   color?: string;
   radius?: number;
   badge?: string;
+  id?: string;
+  selected?: boolean;
 };
 type View = { cx: number; cy: number; zoom: number };
 
@@ -107,6 +113,8 @@ type Marker = {
   count: number;
   badge: string;
   clustered: boolean;
+  id?: string;
+  selected?: boolean;
 };
 
 function buildMarkers(
@@ -119,22 +127,36 @@ function buildMarkers(
 ): Marker[] {
   if (!cluster) {
     return resolved.map((p, i) => ({
-      key: `p${i}`,
+      key: p.id ?? `p${i}`,
       left: projectX(p.lon) * worldSize - originX,
       top: projectY(p.lat) * worldSize - originY,
-      radius: p.radius ?? 5,
+      radius: p.selected ? Math.max(p.radius ?? 5, 10) : (p.radius ?? 5),
       color: p.color ?? TONE_COLOR[p.tone] ?? TONE_COLOR.neutral,
       label: p.label,
       count: 1,
       badge: p.badge ?? '',
       clustered: false,
+      id: p.id,
+      selected: p.selected,
     }));
   }
 
   const cell = view.zoom >= 13 ? 18 : view.zoom >= 11 ? 28 : 40;
   const buckets = new Map<
     string,
-    { left: number; top: number; count: number; hot: number; labels: string[]; tone: string; color?: string }
+    {
+      left: number;
+      top: number;
+      count: number;
+      hot: number;
+      labels: string[];
+      tone: string;
+      color?: string;
+      id?: string;
+      selected?: boolean;
+      radius?: number;
+      badge?: string;
+    }
   >();
   for (const p of resolved) {
     const left = projectX(p.lon) * worldSize - originX;
@@ -147,6 +169,8 @@ function buildMarkers(
       b.count += 1;
       if (p.tone === 'hot') b.hot += 1;
       if (b.labels.length < 4 && p.label) b.labels.push(p.label);
+      b.id = undefined;
+      b.selected = b.selected || p.selected;
     } else {
       buckets.set(key, {
         left,
@@ -156,6 +180,10 @@ function buildMarkers(
         labels: p.label ? [p.label] : [],
         tone: p.tone,
         color: p.color,
+        id: p.id,
+        selected: p.selected,
+        radius: p.radius,
+        badge: p.badge,
       });
     }
   }
@@ -168,12 +196,14 @@ function buildMarkers(
         key,
         left,
         top,
-        radius: 5,
+        radius: b.selected ? Math.max(b.radius ?? 5, 10) : (b.radius ?? 5),
         color: b.color ?? TONE_COLOR[b.tone] ?? TONE_COLOR.cool,
         label: b.labels[0] ?? '',
         count: 1,
-        badge: '',
+        badge: b.badge ?? '',
         clustered: false,
+        id: b.id,
+        selected: b.selected,
       };
     }
     const hotShare = b.hot / b.count;
@@ -186,7 +216,7 @@ function buildMarkers(
       top,
       radius: Math.min(28, 10 + Math.sqrt(b.count) * 1.6),
       color,
-      label: `${b.count.toLocaleString()} incidents\n${b.labels.join('\n')}${extra}`,
+      label: `${b.count.toLocaleString()} devices\n${b.labels.join('\n')}${extra}`,
       count: b.count,
       badge: b.count >= 10 ? String(b.count) : String(b.count),
       clustered: true,
@@ -201,6 +231,8 @@ export function MapView({
   legend,
   cluster = false,
   height = 480,
+  focus = null,
+  onPointClick,
 }: {
   points: MapPoint[];
   polygons?: MapPolygon[];
@@ -209,12 +241,17 @@ export function MapView({
   /** Group nearby points into counted bubbles — useful for dense customer data. */
   cluster?: boolean;
   height?: number;
+  /** Pan/zoom to a point when this changes (e.g. gallery click → device on map). */
+  focus?: { lat: number; lon: number; zoom?: number; key?: string } | null;
+  /** Fired when a non-cluster marker is clicked. */
+  onPointClick?: (point: MapPoint) => void;
 }) {
   const container = useRef<HTMLDivElement | null>(null);
   const [width, setWidth] = useState(0);
   const [view, setView] = useState<View>({ cx: projectX(-86.8), cy: projectY(32.7), zoom: 7 });
   const drag = useRef<{ x: number; y: number; cx: number; cy: number } | null>(null);
   const fitted = useRef('');
+  const lastFocusKey = useRef('');
   const [tip, setTip] = useState<{ x: number; y: number; text: string } | null>(null);
   const dark = typeof window !== 'undefined' && localStorage.getItem(MAP_STYLE_KEY) === 'Dark';
   const tileStyle = dark ? 'dark' : 'light';
@@ -230,6 +267,8 @@ export function MapView({
           color: p.color,
           radius: p.radius,
           badge: p.badge,
+          id: p.id,
+          selected: p.selected,
         }))
         .filter(
           (p) =>
@@ -262,6 +301,21 @@ export function MapView({
     fitted.current = key;
     setView(fitView(resolved, polygons, width, height));
   }, [resolved, polygons, width, height]);
+
+  useEffect(() => {
+    if (!focus || width === 0) return;
+    const lat = Number(focus.lat);
+    const lon = Number(focus.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+    const key = focus.key ?? `${lat},${lon},${focus.zoom ?? 12}`;
+    if (lastFocusKey.current === key) return;
+    lastFocusKey.current = key;
+    setView({
+      cx: projectX(lon),
+      cy: projectY(lat),
+      zoom: Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, focus.zoom ?? 12)),
+    });
+  }, [focus, width]);
 
   const worldSize = TILE * Math.pow(2, view.zoom);
   const originX = view.cx * worldSize - width / 2;
@@ -428,21 +482,29 @@ export function MapView({
               borderRadius: '9999px',
               background: m.color,
               opacity: m.clustered ? 0.88 : 0.92,
-              border: '2px solid rgba(255,255,255,0.95)',
-              boxShadow: '0 1px 4px rgba(15,23,42,0.35)',
+              border: m.selected ? '3px solid #0891b2' : '2px solid rgba(255,255,255,0.95)',
+              boxShadow: m.selected
+                ? '0 0 0 4px rgba(8,145,178,0.35), 0 1px 4px rgba(15,23,42,0.35)'
+                : '0 1px 4px rgba(15,23,42,0.35)',
               fontSize: m.count >= 100 ? 10 : 11,
               fontWeight: 700,
               color: '#ffffff',
-              zIndex: m.clustered ? 2 : 1,
+              zIndex: m.selected ? 3 : m.clustered ? 2 : 1,
             }}
             onPointerEnter={() => setTip({ x: m.left, y: m.top, text: m.label })}
             onPointerLeave={() => setTip(null)}
             onClick={(e) => {
               e.stopPropagation();
-              if (m.clustered) zoomAt(2, e.clientX, e.clientY);
+              if (m.clustered) {
+                zoomAt(2, e.clientX, e.clientY);
+                return;
+              }
+              if (!onPointClick || !m.id) return;
+              const match = points.find((p) => p.id === m.id);
+              if (match) onPointClick(match);
             }}
           >
-            {m.clustered ? m.badge : m.badge}
+            {m.badge}
           </div>
         ))}
 
