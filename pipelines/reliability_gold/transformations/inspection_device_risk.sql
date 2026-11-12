@@ -18,7 +18,7 @@ WITH findings AS (
     MAX(severity) AS max_severity,
     MAX(captured_at) AS last_inspected_at,
     MAX_BY(defect_type, captured_at) AS latest_defect
-  FROM silver_inspections
+  FROM inspection_findings
   GROUP BY company_code, device, device_type, pd_area, workgroup, substation, feeder_id, lat, lon
 )
 SELECT

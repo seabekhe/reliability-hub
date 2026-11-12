@@ -1263,7 +1263,7 @@ export function InspectionsPage({ opco }: { opco: OpCoCode }) {
       <PageHeader
         eyebrow="Operations"
         title="Inspections"
-        description="Field inspection photos with pre-baked computer-vision findings. Model is stubbed — swap in multimodal ai_query later without changing this page."
+        description="Field inspection photos scored in the Lakeflow pipeline with multimodal ai_query over volume image bytes. Planted labels stay on each row for comparison."
       />
       <FilterBar model={filters} />
       {error && <EmptyState>{error}</EmptyState>}

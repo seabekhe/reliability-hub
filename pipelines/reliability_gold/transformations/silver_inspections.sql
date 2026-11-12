@@ -1,5 +1,5 @@
 CREATE OR REFRESH MATERIALIZED VIEW silver_inspections
-COMMENT 'Cleaned asset-inspection events (pre-baked CV findings; model stubbed)'
+COMMENT 'Cleaned asset-inspection events. Planted labels live here; multimodal scoring happens in inspection_findings over volume image bytes.'
 CLUSTER BY (company_code, captured_at)
 AS
 SELECT
