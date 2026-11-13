@@ -59,7 +59,7 @@ targets:
     variables:
       agents_serving_endpoint_name: databricks-claude-sonnet-4-5
       sql_warehouse_id: b7469619d98a1547
-      genie_space_id: 01f1da15ad1e12a994581146cb487715
+      genie_space_id: 01f1df7954d2157baebf85229a30c823
       postgres_branch: projects/reliability-hub/branches/production
       postgres_database: projects/reliability-hub/branches/production/databases/databricks-postgres
       postgres_project: projects/reliability-hub

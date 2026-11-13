@@ -1,6 +1,5 @@
 CREATE OR REFRESH MATERIALIZED VIEW company_breakdown
 COMMENT 'PD-area SAIDI / SAIFI this YTD vs prior year (Jan–Jul), per company'
-WITH ROW FILTER serverless_sea202601_catalog.reliability_gold.visible_opco ON (company_code)
 AS
 WITH cust AS (
   SELECT company_code, pd_area, SUM(customers_served) AS n

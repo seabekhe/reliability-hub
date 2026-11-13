@@ -1,6 +1,5 @@
 CREATE OR REFRESH MATERIALIZED VIEW worst_performing_feeders
 COMMENT 'Feeders ranked by severity index (SAIDI × SAIFI) since 2024'
-WITH ROW FILTER serverless_sea202601_catalog.reliability_gold.visible_opco ON (company_code)
 AS
 WITH agg AS (
   SELECT

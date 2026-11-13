@@ -3,7 +3,6 @@
 -- from those facts only. Treat brief text as a draft for planner review, not a source of truth.
 CREATE OR REFRESH MATERIALIZED VIEW feeder_briefs
 COMMENT 'AI-generated brief per top-10 worst performing feeder (Reported, since 2024). Brief text is written by Claude (databricks-claude-sonnet-4-5) from the facts column only. Draft for planner review.'
-WITH ROW FILTER serverless_sea202601_catalog.reliability_gold.visible_opco ON (company_code)
 AS
 WITH anchor AS (
   SELECT MAX(start_ts) AS end_ts FROM silver_outages

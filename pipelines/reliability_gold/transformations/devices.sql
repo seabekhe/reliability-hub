@@ -1,6 +1,5 @@
 CREATE OR REFRESH MATERIALIZED VIEW devices
 COMMENT 'Protective devices ranked by incidents in trailing windows'
-WITH ROW FILTER serverless_sea202601_catalog.reliability_gold.visible_opco ON (company_code)
 AS
 WITH as_of AS (
   SELECT DATE '2026-07-31' AS d

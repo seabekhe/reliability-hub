@@ -1,8 +1,8 @@
--- Demo seed for the UC row filter visible_opco (see security/visible_opco.sql).
--- Real workspace testers are granted via user_opco_acl (scripts/apply_visible_opco.sql),
+-- Demo seed for the ABAC UDF visible_opco (see security/visible_opco.sql).
+-- Real workspace testers are granted via user_opco_acl (scripts/apply_opco_abac.sh),
 -- not by putting personal emails in this file.
 CREATE OR REFRESH MATERIALIZED VIEW user_opco_access
-COMMENT 'Demo OpCo ACL rows consumed by reliability_gold.visible_opco row filter'
+COMMENT 'Demo OpCo ACL rows consumed by reliability_gold.visible_opco (ABAC)'
 AS
 SELECT * FROM VALUES
   ('exec.demo@omedutilities.com', 'ALL', 'executive'),

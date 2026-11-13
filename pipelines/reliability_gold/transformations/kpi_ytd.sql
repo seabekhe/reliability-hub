@@ -1,6 +1,5 @@
 CREATE OR REFRESH MATERIALIZED VIEW kpi_ytd
 COMMENT 'Year-to-date SAIDI / SAIFI vs goal with year-end projection and funding'
-WITH ROW FILTER serverless_sea202601_catalog.reliability_gold.visible_opco ON (company_code)
 AS
 SELECT
   m.company_code,

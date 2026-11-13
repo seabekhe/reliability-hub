@@ -1,6 +1,5 @@
 CREATE OR REFRESH MATERIALIZED VIEW workgroup_boundaries
 COMMENT 'Workgroup map centroids. geojson is null — no polygon source in outage_source'
-WITH ROW FILTER serverless_sea202601_catalog.reliability_gold.visible_opco ON (company_code)
 AS
 SELECT
   r.company_code,

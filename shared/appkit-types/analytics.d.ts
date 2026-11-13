@@ -160,114 +160,6 @@ declare module "@databricks/appkit-ui/react" {
           lon: number;
         }>;
       };
-    inspection_device_risk: {
-        name: "inspection_device_risk";
-        parameters: {
-          /** STRING - use sql.string() */
-          opco: SQLStringMarker;
-        };
-        result: Array<{
-          /** @sqlType STRING */
-          company_code: string;
-          /** @sqlType STRING */
-          device: string;
-          /** @sqlType STRING */
-          device_type: string;
-          /** @sqlType STRING */
-          pd_area: string;
-          /** @sqlType STRING */
-          workgroup: string;
-          /** @sqlType STRING */
-          substation: string;
-          /** @sqlType INT */
-          feeder_id: number;
-          /** @sqlType DOUBLE */
-          lat: number;
-          /** @sqlType DOUBLE */
-          lon: number;
-          /** @sqlType BIGINT */
-          inspection_count: number;
-          /** @sqlType BIGINT */
-          open_findings: number;
-          /** @sqlType BIGINT */
-          critical_findings: number;
-          /** @sqlType INT */
-          max_severity: number;
-          /** @sqlType TIMESTAMP */
-          last_inspected_at: string;
-          /** @sqlType STRING */
-          latest_defect: string;
-          /** @sqlType BIGINT */
-          device_mo_12: number;
-          /** @sqlType STRING */
-          device_status: string;
-          /** @sqlType DOUBLE */
-          risk_score: number;
-          /** @sqlType STRING */
-          risk_band: string;
-        }>;
-      };
-    inspection_findings: {
-        name: "inspection_findings";
-        parameters: {
-          /** STRING - use sql.string() */
-          opco: SQLStringMarker;
-        };
-        result: Array<{
-          /** @sqlType STRING */
-          inspection_id: string;
-          /** @sqlType STRING */
-          company_code: string;
-          /** @sqlType STRING */
-          device: string;
-          /** @sqlType STRING */
-          device_type: string;
-          /** @sqlType STRING */
-          pd_area: string;
-          /** @sqlType STRING */
-          workgroup: string;
-          /** @sqlType STRING */
-          substation: string;
-          /** @sqlType INT */
-          feeder_id: number;
-          /** @sqlType DOUBLE */
-          lat: number;
-          /** @sqlType DOUBLE */
-          lon: number;
-          /** @sqlType TIMESTAMP */
-          captured_at: string;
-          /** @sqlType STRING */
-          source: string;
-          /** @sqlType STRING */
-          defect_type: string;
-          /** @sqlType INT */
-          severity: number;
-          /** @sqlType DOUBLE */
-          confidence: number;
-          /** @sqlType STRING */
-          summary: string;
-          /** @sqlType STRING */
-          label_truth: string;
-          /** @sqlType STRING */
-          image_rel_path: string;
-          /** @sqlType STRING */
-          thumbnail_data_url: string;
-          /** @sqlType STRING */
-          image_credit: string;
-          /** @sqlType STRING */
-          image_license: string;
-          /** @sqlType STRING */
-          commons_title: string;
-          /** @sqlType STRING */
-          model_status: string;
-          /** @sqlType STRING */
-          finding_status: string;
-          /** @sqlType BIGINT */
-          device_mo_12: number;
-          /** @sqlType STRING */
-          device_status: string;
-        }>;
-      };
     feeder_briefs: {
         name: "feeder_briefs";
         parameters: {
@@ -384,6 +276,114 @@ declare module "@databricks/appkit-ui/react" {
           cmi: number;
           /** @sqlType BIGINT */
           severe: number;
+        }>;
+      };
+    inspection_device_risk: {
+        name: "inspection_device_risk";
+        parameters: {
+          /** STRING - use sql.string() */
+          opco: SQLStringMarker;
+        };
+        result: Array<{
+          /** @sqlType STRING */
+          company_code: string;
+          /** @sqlType STRING */
+          device: string;
+          /** @sqlType STRING */
+          device_type: string;
+          /** @sqlType STRING */
+          pd_area: string;
+          /** @sqlType STRING */
+          workgroup: string;
+          /** @sqlType STRING */
+          substation: string;
+          /** @sqlType INT */
+          feeder_id: number;
+          /** @sqlType DOUBLE */
+          lat: number;
+          /** @sqlType DOUBLE */
+          lon: number;
+          /** @sqlType BIGINT */
+          inspection_count: number;
+          /** @sqlType BIGINT */
+          open_findings: number;
+          /** @sqlType BIGINT */
+          critical_findings: number;
+          /** @sqlType INT */
+          max_severity: number;
+          /** @sqlType TIMESTAMP */
+          last_inspected_at: string;
+          /** @sqlType STRING */
+          latest_defect: string;
+          /** @sqlType BIGINT */
+          device_mo_12: number;
+          /** @sqlType STRING */
+          device_status: string;
+          /** @sqlType DECIMAL(26,1) */
+          risk_score: number;
+          /** @sqlType STRING */
+          risk_band: string;
+        }>;
+      };
+    inspection_findings: {
+        name: "inspection_findings";
+        parameters: {
+          /** STRING - use sql.string() */
+          opco: SQLStringMarker;
+        };
+        result: Array<{
+          /** @sqlType STRING */
+          inspection_id: string;
+          /** @sqlType STRING */
+          company_code: string;
+          /** @sqlType STRING */
+          device: string;
+          /** @sqlType STRING */
+          device_type: string;
+          /** @sqlType STRING */
+          pd_area: string;
+          /** @sqlType STRING */
+          workgroup: string;
+          /** @sqlType STRING */
+          substation: string;
+          /** @sqlType INT */
+          feeder_id: number;
+          /** @sqlType DOUBLE */
+          lat: number;
+          /** @sqlType DOUBLE */
+          lon: number;
+          /** @sqlType TIMESTAMP */
+          captured_at: string;
+          /** @sqlType STRING */
+          source: string;
+          /** @sqlType STRING */
+          defect_type: string;
+          /** @sqlType INT */
+          severity: number;
+          /** @sqlType DOUBLE */
+          confidence: number;
+          /** @sqlType STRING */
+          summary: string;
+          /** @sqlType STRING */
+          label_truth: string;
+          /** @sqlType STRING */
+          image_rel_path: string;
+          /** @sqlType STRING */
+          thumbnail_data_url: string;
+          /** @sqlType STRING */
+          image_credit: string;
+          /** @sqlType STRING */
+          image_license: string;
+          /** @sqlType STRING */
+          commons_title: string;
+          /** @sqlType STRING */
+          model_status: string;
+          /** @sqlType STRING */
+          finding_status: string;
+          /** @sqlType BIGINT */
+          device_mo_12: number;
+          /** @sqlType STRING */
+          device_status: string;
         }>;
       };
     kpi_heatmap: {

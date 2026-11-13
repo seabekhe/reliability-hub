@@ -31,6 +31,13 @@ Unity Catalog (serverless_sea202601_catalog)
 Lakebase (projects/reliability-hub)
   app_data.user_preferences, saved_views, groups, help_requests, chat_pins
                  ↑ operational / transactional / low-latency
+  gold.*  (kpi_ytd, kpi_monthly, company_breakdown, worst_performing_feeders,
+           reliability_rankings, feeder_briefs, inspection_device_risk,
+           cx_metrics, devices)
+                   ↑ hottest gold slice via UC synced tables in Postgres
+                   schema `reliability_hub_oltp` (`/api/snappy/*`).
+                   OpCo security is ABAC (not table-level row filters), so
+                   synced tables are allowed.
 
 Databricks App (AppKit)
   analytics SQL warehouse  → gold layer (OBO, runs as signed-in user)
@@ -48,14 +55,15 @@ Separate browser tabs / app instances isolate access only by duplicating the pro
 
 The better pattern:
 
-1. **Unity Catalog** as the system of record for data access (row filters on `company_code`, grants on gold tables).
+1. **Unity Catalog** as the system of record for data access — schema ABAC
+   policy on `company_code` columns tagged `opco`, plus grants on gold tables.
 2. **App entitlements** derived from the signed-in user's Databricks groups to hide nav items and OpCo chips the user cannot use.
 3. **One hub** whose Executive Summary is the landing page, with in-app drill-down into authorized OpCos.
 4. **User auth for analytics and the assistant.** Gold queries are `*.obo.sql` and
    the Reliability AI Assistant is a Genie space; both run as the signed-in user
-   via the `sql` and `dashboards.genie` user API scopes, so the `visible_opco`
-   row filter applies to charts and to natural-language answers alike. Lakebase
-   (preferences, saved views, groups CRUD) stays on the app service principal.
+   via the `sql` and `dashboards.genie` user API scopes, so the ABAC
+   `visible_opco` policy applies to charts and to natural-language answers alike.
+   Lakebase (preferences, saved views, groups CRUD) stays on the app service principal.
 
 Groups used by the app:
 
@@ -77,20 +85,22 @@ groups **cannot receive Unity Catalog grants** (`PRINCIPAL_DOES_NOT_EXIST`).
 Until they are promoted to account groups:
 
 - App CAN_USE is granted to the workspace groups (nav/entitlements).
-- Gold `SELECT` is granted to `account users`; row filter
-  `reliability_gold.visible_opco` is what actually partitions OpCo rows.
-  Apply with `scripts/apply_visible_opco.sql` (also declared on gold MVs via
-  `WITH ROW FILTER` in `pipelines/reliability_gold/transformations/`).
-- The filter honors `is_account_group_member()` **and**
+- Gold `SELECT` is granted to `account users`; ABAC policy
+  `reliability_opco_row_filter` on schema `reliability_gold` partitions OpCo
+  rows via UDF `visible_opco` on columns tagged governed tag `opco`.
+  Apply with `scripts/apply_opco_abac.sh` (see `scripts/apply_opco_abac.sql`).
+  Do **not** use table-level `SET ROW FILTER` / `WITH ROW FILTER` — that blocks
+  Lakebase synced tables.
+- The UDF honors `is_account_group_member()` **and**
   `user_opco_access` (demo seed MV) **and** `user_opco_acl` (workspace
   overrides seeded by the apply script for `session_user()`). Workspace
   groups are invisible to UC; do not put personal emails in the public repo.
 - App `:opco` query params and entitlement chips are UX only — they narrow
-  within the caller's allowed OpCos. Genie and OBO SQL inherit the UC filter.
+  within the caller's allowed OpCos. Genie and OBO SQL inherit the ABAC policy.
 
 Production should provision the same names as account groups through the
 enterprise IdP, grant `SELECT` to those groups instead of `account users`,
-and keep the row filter.
+and keep the ABAC policy.
 
 ## Use cases in the app
 

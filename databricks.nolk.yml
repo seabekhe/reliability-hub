@@ -41,4 +41,4 @@ targets:
     variables:
       agents_serving_endpoint_name: databricks-claude-sonnet-4-5
       sql_warehouse_id: 0000000004f59f01
-      genie_space_id: 01f1da15ad1e12a994581146cb487715
+      genie_space_id: 01f1df7954d2157baebf85229a30c823

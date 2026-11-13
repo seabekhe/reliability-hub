@@ -1,6 +1,5 @@
 CREATE OR REFRESH MATERIALIZED VIEW cx_metrics
 COMMENT 'Customer-experience SAIDI / SAIFI vs 7-year and trailing 12 months, per company'
-WITH ROW FILTER serverless_sea202601_catalog.reliability_gold.visible_opco ON (company_code)
 AS
 WITH cust AS (
   SELECT company_code, year, SUM(customers_served) AS n

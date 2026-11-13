@@ -1,6 +1,5 @@
 CREATE OR REFRESH MATERIALIZED VIEW kpi_monthly
 COMMENT 'Monthly SAIDI / SAIFI / CPI by company and dataset'
-WITH ROW FILTER serverless_sea202601_catalog.reliability_gold.visible_opco ON (company_code)
 AS
 WITH company AS (
   SELECT company_code, SUM(customers_served) AS n

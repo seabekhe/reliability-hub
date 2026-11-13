@@ -1,7 +1,6 @@
 CREATE OR REFRESH MATERIALIZED VIEW incidents
 COMMENT 'Gold incident fact used by the Lakebase app Incidents page'
 CLUSTER BY (start_ts, pd_area)
-WITH ROW FILTER serverless_sea202601_catalog.reliability_gold.visible_opco ON (company_code)
 AS
 SELECT
   incident_id,

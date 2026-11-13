@@ -1,6 +1,5 @@
 CREATE OR REFRESH MATERIALIZED VIEW inspection_device_risk
 COMMENT 'Per-device inspection risk: open findings rolled up against trailing incident counts'
-WITH ROW FILTER serverless_sea202601_catalog.reliability_gold.visible_opco ON (company_code)
 AS
 WITH findings AS (
   SELECT

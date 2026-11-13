@@ -34,4 +34,4 @@ targets:
       host: https://fevm-serverless-sea202601.cloud.databricks.com
     variables:
       sql_warehouse_id: 0000000004f59f01
-      genie_space_id: 01f1da15ad1e12a994581146cb487715
+      genie_space_id: 01f1df7954d2157baebf85229a30c823

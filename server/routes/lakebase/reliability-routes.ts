@@ -95,12 +95,6 @@ export async function setupReliabilityLakebaseRoutes(appkit: AppKitWithLakebase)
          ('Anniston Engineering', 'Protection & planning', 'Anniston', 'East Restoration', 'ops.oc1@omedutilities.com')`,
       );
     }
-    // Rewrite legacy company codes left in seeded member emails from earlier demos.
-    await appkit.lakebase.query(
-      `UPDATE app_data.groups
-       SET members = REPLACE(REPLACE(REPLACE(members, 'ops.apc@', 'ops.oc1@'), 'ops.gpc@', 'ops.oc2@'), 'ops.mpc@', 'ops.oc3@')
-       WHERE members ILIKE '%ops.apc@%' OR members ILIKE '%ops.gpc@%' OR members ILIKE '%ops.mpc@%'`,
-    );
     console.log('[lakebase] app_data schema ready');
   } catch (err) {
     console.warn('[lakebase] setup failed:', (err as Error).message);
@@ -288,6 +282,95 @@ export async function setupReliabilityLakebaseRoutes(appkit: AppKitWithLakebase)
       } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Failed to save view' });
+      }
+    });
+
+    // Hot gold slice from UC → Lakebase synced tables (schema reliability_hub_oltp).
+    // Created by scripts/create_gold_synced_tables.sh (requires OpCo ABAC, not table RLS).
+    const SNAPPY_SCHEMA = 'reliability_hub_oltp';
+
+    app.get('/api/snappy/manifest', async (_req, res) => {
+      try {
+        const result = await appkit.lakebase.query(
+          `SELECT c.relname AS table_name,
+                  GREATEST(c.reltuples, 0)::bigint AS approx_row_count
+           FROM pg_class c
+           JOIN pg_namespace n ON n.oid = c.relnamespace
+           WHERE n.nspname = $1
+             AND c.relkind IN ('r', 'p')
+             AND c.relname NOT LIKE '%\\_pkey' ESCAPE '\\'
+           ORDER BY c.relname`,
+          [SNAPPY_SCHEMA],
+        );
+        res.json({
+          schema: SNAPPY_SCHEMA,
+          source: 'uc_synced_table',
+          tables: result.rows,
+        });
+      } catch (err) {
+        console.error(err);
+        res.status(500).json({
+          error:
+            'Synced tables not available. Apply OpCo ABAC then run scripts/create_gold_synced_tables.sh',
+        });
+      }
+    });
+
+    app.get('/api/snappy/kpi-ytd', async (req, res) => {
+      const opco = typeof req.query.opco === 'string' ? req.query.opco : 'OC1';
+      const t0 = Date.now();
+      try {
+        const result = await appkit.lakebase.query(
+          `SELECT company_code, year, saidi_actual, saifi_actual, saidi_goal, saifi_goal,
+                  saidi_ye_proj, saifi_ye_proj, saidi_funding_pct, saifi_funding_pct
+           FROM ${SNAPPY_SCHEMA}.kpi_ytd
+           WHERE company_code = $1`,
+          [opco],
+        );
+        const latency_ms = Date.now() - t0;
+        res.json({
+          source: 'lakebase_synced',
+          schema: SNAPPY_SCHEMA,
+          table: 'kpi_ytd',
+          opco,
+          latency_ms,
+          rows: result.rows,
+        });
+      } catch (err) {
+        console.error(err);
+        res.status(500).json({
+          error: `Failed to query ${SNAPPY_SCHEMA}.kpi_ytd from Lakebase`,
+        });
+      }
+    });
+
+    app.get('/api/snappy/inspection-risk', async (req, res) => {
+      const opco = typeof req.query.opco === 'string' ? req.query.opco : 'OC1';
+      const limit = Math.min(Number(req.query.limit) || 10, 100);
+      const t0 = Date.now();
+      try {
+        const result = await appkit.lakebase.query(
+          `SELECT device, risk_band, risk_score, open_findings, critical_findings,
+                  latest_defect, device_mo_12
+           FROM ${SNAPPY_SCHEMA}.inspection_device_risk
+           WHERE company_code = $1
+           ORDER BY risk_score DESC
+           LIMIT $2`,
+          [opco, limit],
+        );
+        res.json({
+          source: 'lakebase_synced',
+          schema: SNAPPY_SCHEMA,
+          table: 'inspection_device_risk',
+          opco,
+          latency_ms: Date.now() - t0,
+          rows: result.rows,
+        });
+      } catch (err) {
+        console.error(err);
+        res.status(500).json({
+          error: `Failed to query ${SNAPPY_SCHEMA}.inspection_device_risk from Lakebase`,
+        });
       }
     });
   });

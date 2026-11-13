@@ -1,6 +1,5 @@
 CREATE OR REFRESH MATERIALIZED VIEW customer_incidents
 COMMENT 'Repeat customer outages for the Customer incidents page'
-WITH ROW FILTER serverless_sea202601_catalog.reliability_gold.visible_opco ON (company_code)
 AS
 SELECT
   company_code,

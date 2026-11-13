@@ -1,22 +1,18 @@
--- OpCo row filter for Reliability Hub gold tables.
--- Applied with: ALTER MATERIALIZED VIEW … SET ROW FILTER visible_opco ON (company_code)
--- or WITH ROW FILTER visible_opco ON (company_code) on CREATE OR REFRESH.
+-- OpCo visibility UDF used by the ABAC row-filter policy
+-- (reliability_gold.reliability_opco_row_filter), NOT by table-level SET ROW FILTER.
 --
 -- Access is granted when ANY of:
 --   1. Account group reliability-exec-all (all OpCos)
 --   2. Account group reliability-opco-oc{N} for that OpCo
 --   3. A row in user_opco_access (pipeline-seeded demo users)
---   4. A row in user_opco_acl (workspace overrides; not in git — see scripts/apply_visible_opco.sql)
+--   4. A row in user_opco_acl (workspace overrides; see scripts/apply_opco_abac.sql)
 --
--- Parameter is named `opco` (not `company_code`) so it does not shadow
--- a.company_code inside the EXISTS subqueries.
---
--- App :opco parameters remain a UX selector within the caller's allowed OpCos.
--- Genie and ad-hoc SQL inherit the same filter via OBO / session_user().
+-- Parameter is named `opco` so it does not shadow a.company_code in EXISTS.
+-- Apply / re-apply with: scripts/apply_opco_abac.sql
 
 CREATE OR REPLACE FUNCTION serverless_sea202601_catalog.reliability_gold.visible_opco(opco STRING)
 RETURNS BOOLEAN
-COMMENT 'UC row filter: caller may see this OpCo row'
+COMMENT 'ABAC OpCo visibility UDF — used by policy reliability_opco_row_filter'
 RETURN (
   is_account_group_member('reliability-exec-all')
   OR (
