@@ -1,5 +1,6 @@
 CREATE OR REFRESH MATERIALIZED VIEW kpi_goals
 COMMENT 'Annual SAIDI / SAIFI goals per company (demo defaults matching generate_medallion.py GOALS)'
+WITH ROW FILTER serverless_sea202601_catalog.reliability_gold.visible_opco ON (company_code)
 AS
 SELECT * FROM VALUES
   ('OC1', 2026, 74.2, 0.592),

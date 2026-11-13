@@ -5,6 +5,7 @@
 -- the call succeeds, otherwise fall back to the planted values.
 CREATE OR REFRESH MATERIALIZED VIEW inspection_findings
 COMMENT 'Asset-inspection CV findings. Multimodal ai_query over volume image bytes; falls back to planted labels on model error.'
+WITH ROW FILTER serverless_sea202601_catalog.reliability_gold.visible_opco ON (company_code)
 AS
 WITH scored AS (
   SELECT

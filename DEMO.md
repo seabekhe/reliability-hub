@@ -79,9 +79,14 @@ Until they are promoted to account groups:
 - App CAN_USE is granted to the workspace groups (nav/entitlements).
 - Gold `SELECT` is granted to `account users`; row filter
   `reliability_gold.visible_opco` is what actually partitions OpCo rows.
+  Apply with `scripts/apply_visible_opco.sql` (also declared on gold MVs via
+  `WITH ROW FILTER` in `pipelines/reliability_gold/transformations/`).
 - The filter honors `is_account_group_member()` **and**
-  `reliability_gold.user_opco_access` keyed by `session_user()`, so testers
-  need an email row in that table (workspace groups are invisible to UC).
+  `user_opco_access` (demo seed MV) **and** `user_opco_acl` (workspace
+  overrides seeded by the apply script for `session_user()`). Workspace
+  groups are invisible to UC; do not put personal emails in the public repo.
+- App `:opco` query params and entitlement chips are UX only — they narrow
+  within the caller's allowed OpCos. Genie and OBO SQL inherit the UC filter.
 
 Production should provision the same names as account groups through the
 enterprise IdP, grant `SELECT` to those groups instead of `account users`,

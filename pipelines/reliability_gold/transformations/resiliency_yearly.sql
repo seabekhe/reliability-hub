@@ -1,5 +1,6 @@
 CREATE OR REFRESH MATERIALIZED VIEW resiliency_yearly
 COMMENT 'Share of CI restored within 1 / 2 / 10 hours by year'
+WITH ROW FILTER serverless_sea202601_catalog.reliability_gold.visible_opco ON (company_code)
 AS
 SELECT
   company_code,

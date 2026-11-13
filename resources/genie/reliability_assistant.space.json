@@ -49,6 +49,18 @@
         "question": [
           "Which devices have the most operations in the last 12 months?"
         ]
+      },
+      {
+        "id": "0af8f3bba5f643679c7f54e6de11ec63",
+        "question": [
+          "Show the most severe inspection findings and whether the model agreed with the planted label"
+        ]
+      },
+      {
+        "id": "88e08016809c4a75bc8788828f932b40",
+        "question": [
+          "Which devices have the highest inspection risk scores in OC1?"
+        ]
       }
     ]
   },
@@ -68,6 +80,12 @@
       },
       {
         "identifier": "serverless_sea202601_catalog.reliability_gold.incidents"
+      },
+      {
+        "identifier": "serverless_sea202601_catalog.reliability_gold.inspection_device_risk"
+      },
+      {
+        "identifier": "serverless_sea202601_catalog.reliability_gold.inspection_findings"
       },
       {
         "identifier": "serverless_sea202601_catalog.reliability_gold.kpi_goals"
@@ -100,12 +118,18 @@
           "- 'This year' and YTD mean calendar 2026. Monthly SAIDI comes from kpi_monthly, not an average of kpi_ytd.\n",
           "- Worst feeders means worst_performing_feeders ranked by si descending, dataset = Reported, unless the user asks for CX.\n",
           "\n",
+          "## DISAMBIGUATION (inspections)\n",
+          "- Inspection risk means inspection_device_risk ranked by risk_score descending; High/Medium/Low come from risk_band.\n",
+          "- Inspection findings live in inspection_findings. defect_type/severity/summary are model outputs from multimodal ai_query; label_truth is the planted demo label for comparison; model_status = 'ai_query' when scoring succeeded.\n",
+          "\n",
           "## DATA QUALITY NOTES\n",
           "- company_breakdown.saidi_actual can be NULL for some PD areas; exclude those rows when ranking.\n",
           "- feeder_briefs.brief is AI-generated draft text. Quote numbers from numeric columns, not from the brief wording.\n",
           "- kpi_monthly is monthly grain. Sum it for year totals; do not average monthly SAIDI into a YTD figure.\n",
           "\n",
           "## CONSTRAINTS\n",
+          "- Prefer inspection_findings and inspection_device_risk for CV questions; do not query image byte columns.\n",
+          "- When comparing model vs planted labels, use defect_type vs label_truth and report model_status.\n",
           "- Exclude company_code = 'ALL' when ranking or comparing individual companies.\n",
           "- Filter to one company_code unless the user explicitly asks to compare companies.\n",
           "- Do not treat feeder_briefs.brief as a source of numeric truth.\n",
@@ -113,7 +137,8 @@
           "## Instructions you must follow when providing summaries\n",
           "- When comparing actual vs goal, state beating goal or missing goal.\n",
           "- Label feeder brief text as an AI-generated draft.\n",
-          "- Remind users this is mock Omed Utilities data and to verify before sharing.\n"
+          "- Remind users this is mock Omed Utilities data and to verify before sharing.\n",
+          "\n"
         ]
       }
     ],
@@ -214,6 +239,22 @@
         ]
       },
       {
+        "id": "883d707c57d04864af375e27f9cf6a04",
+        "question": [
+          "Which devices have the highest inspection risk scores in OC1?"
+        ],
+        "sql": [
+          "SELECT device, company_code, risk_band, risk_score, open_findings, critical_findings, latest_defect, device_mo_12\n",
+          "FROM serverless_sea202601_catalog.reliability_gold.inspection_device_risk\n",
+          "WHERE company_code = 'OC1'\n",
+          "ORDER BY risk_score DESC\n",
+          "LIMIT 10"
+        ],
+        "usage_guidance": [
+          "Use inspection_device_risk. Rank by risk_score descending. Filter to one company_code unless comparing."
+        ]
+      },
+      {
         "id": "a82261c427f6c722c7f77ad9481fc8eb",
         "question": [
           "How has monthly SAIDI trended through 2026?"
@@ -246,6 +287,21 @@
         ],
         "usage_guidance": [
           "Use kpi_ytd for YTD actual vs goal. Lower SAIDI is better, so actual <= goal is beating goal."
+        ]
+      },
+      {
+        "id": "e26de71d813e4e758c22383ab77f1be2",
+        "question": [
+          "Show the most severe inspection findings and whether the model agreed with the planted label"
+        ],
+        "sql": [
+          "SELECT inspection_id, company_code, device, defect_type, label_truth, severity, confidence, finding_status, model_status, summary\n",
+          "FROM serverless_sea202601_catalog.reliability_gold.inspection_findings\n",
+          "ORDER BY severity DESC, confidence DESC\n",
+          "LIMIT 20"
+        ],
+        "usage_guidance": [
+          "Use inspection_findings. Compare defect_type to label_truth. Prefer model_status = 'ai_query'. Do not select image bytes."
         ]
       }
     ],
@@ -320,6 +376,20 @@
           ],
           "instruction": [
             "Apply when ranking or comparing individual companies on kpi_ytd."
+          ]
+        },
+        {
+          "id": "4ebf43a16f0c44daa883c7b798683c56",
+          "sql": [
+            "inspection_device_risk.risk_band = 'High'"
+          ],
+          "display_name": "High inspection risk",
+          "instruction": [
+            "Apply when the user asks for high-risk inspected devices."
+          ],
+          "synonyms": [
+            "high risk inspections",
+            "critical inspection risk"
           ]
         },
         {
